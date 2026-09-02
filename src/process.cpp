@@ -884,7 +884,7 @@ namespace proc {
     return _app.uuid;
   }
 
-  boost::process::environment proc_t::get_env() {
+  boost::process::v1::environment proc_t::get_env() {
     return _env;
   }
 

@@ -148,6 +148,7 @@ namespace crypto {
     bool enable_legacy_ordering;
     bool allow_client_commands;
     bool always_use_virtual_display;
+    bool enabled = true;  ///< Whether this persisted client entry may connect (upstream enable/disable toggle).
   };
 
   using p_named_cert_t = std::shared_ptr<named_cert_t>;

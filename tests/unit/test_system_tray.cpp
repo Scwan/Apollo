@@ -12,6 +12,7 @@
 #include <format>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <tuple>
 
@@ -114,38 +115,37 @@ namespace {
   #endif
 
   /**
-   * @brief Verify the persistent menu exposed by Sunshine.
+   * @brief Verify the persistent menu exposed by Apollo.
    */
   void verify_menu() {
     const auto &tray_data = system_tray::tray_data_for_testing();
     ASSERT_NE(tray_data.menu, nullptr);
 
-    EXPECT_STREQ(tray_data.menu[0].text, "Open Sunshine");
+    // Apollo's Windows tray appends the host name and port to the first entry after
+    // init_tray_threaded(), so only the prefix is stable.
+    ASSERT_NE(tray_data.menu[0].text, nullptr);
+    EXPECT_TRUE(std::string_view {tray_data.menu[0].text}.starts_with("Open Apollo"));
     EXPECT_NE(tray_data.menu[0].cb, nullptr);
     EXPECT_STREQ(tray_data.menu[1].text, "-");
     EXPECT_EQ(tray_data.menu[1].cb, nullptr);
+    EXPECT_STREQ(tray_data.menu[2].text, "Reload Apps");
+    EXPECT_NE(tray_data.menu[2].cb, nullptr);
+    EXPECT_STREQ(tray_data.menu[3].text, "-");
 
   #ifdef _WIN32
-    EXPECT_STREQ(tray_data.menu[2].text, "Virtual HID Driver");
-    ASSERT_NE(tray_data.menu[2].submenu, nullptr);
-    EXPECT_STREQ(tray_data.menu[2].submenu[0].text, "Status: Checking");
-    EXPECT_EQ(tray_data.menu[2].submenu[0].disabled, 1);
-    EXPECT_STREQ(tray_data.menu[2].submenu[1].text, "-");
-    EXPECT_STREQ(tray_data.menu[2].submenu[2].text, "Open License Settings");
-    EXPECT_NE(tray_data.menu[2].submenu[2].cb, nullptr);
-    EXPECT_STREQ(tray_data.menu[2].submenu[3].text, "Virtual HID Driver Benefits");
-    EXPECT_EQ(tray_data.menu[2].submenu[3].cb, nullptr);
-    verify_virtualhid_benefits_menu(tray_data.menu[2].submenu[3].submenu);
-    EXPECT_STREQ(tray_data.menu[2].submenu[4].text, "Download Virtual HID Driver");
-    EXPECT_NE(tray_data.menu[2].submenu[4].cb, nullptr);
-    EXPECT_EQ(tray_data.menu[2].submenu[5].text, nullptr);
-    EXPECT_STREQ(tray_data.menu[3].text, "-");
-    EXPECT_STREQ(tray_data.menu[4].text, "Donate");
+    EXPECT_STREQ(tray_data.menu[4].text, "Virtual HID Driver");
     ASSERT_NE(tray_data.menu[4].submenu, nullptr);
-    EXPECT_STREQ(tray_data.menu[4].submenu[0].text, "GitHub Sponsors");
-    EXPECT_STREQ(tray_data.menu[4].submenu[1].text, "Patreon");
-    EXPECT_STREQ(tray_data.menu[4].submenu[2].text, "PayPal");
-    EXPECT_EQ(tray_data.menu[4].submenu[3].text, nullptr);
+    EXPECT_STREQ(tray_data.menu[4].submenu[0].text, "Status: Checking");
+    EXPECT_EQ(tray_data.menu[4].submenu[0].disabled, 1);
+    EXPECT_STREQ(tray_data.menu[4].submenu[1].text, "-");
+    EXPECT_STREQ(tray_data.menu[4].submenu[2].text, "Open License Settings");
+    EXPECT_NE(tray_data.menu[4].submenu[2].cb, nullptr);
+    EXPECT_STREQ(tray_data.menu[4].submenu[3].text, "Virtual HID Driver Benefits");
+    EXPECT_EQ(tray_data.menu[4].submenu[3].cb, nullptr);
+    verify_virtualhid_benefits_menu(tray_data.menu[4].submenu[3].submenu);
+    EXPECT_STREQ(tray_data.menu[4].submenu[4].text, "Download Virtual HID Driver");
+    EXPECT_NE(tray_data.menu[4].submenu[4].cb, nullptr);
+    EXPECT_EQ(tray_data.menu[4].submenu[5].text, nullptr);
     EXPECT_STREQ(tray_data.menu[5].text, "-");
     EXPECT_STREQ(tray_data.menu[6].text, "Reset Display Device Config");
     EXPECT_NE(tray_data.menu[6].cb, nullptr);
@@ -155,13 +155,6 @@ namespace {
     EXPECT_NE(tray_data.menu[8].cb, nullptr);
     EXPECT_EQ(tray_data.menu[9].text, nullptr);
   #else
-    EXPECT_STREQ(tray_data.menu[2].text, "Donate");
-    ASSERT_NE(tray_data.menu[2].submenu, nullptr);
-    EXPECT_STREQ(tray_data.menu[2].submenu[0].text, "GitHub Sponsors");
-    EXPECT_STREQ(tray_data.menu[2].submenu[1].text, "Patreon");
-    EXPECT_STREQ(tray_data.menu[2].submenu[2].text, "PayPal");
-    EXPECT_EQ(tray_data.menu[2].submenu[3].text, nullptr);
-    EXPECT_STREQ(tray_data.menu[3].text, "-");
     EXPECT_STREQ(tray_data.menu[4].text, "Restart");
     EXPECT_NE(tray_data.menu[4].cb, nullptr);
     EXPECT_STREQ(tray_data.menu[5].text, "Quit");
@@ -215,7 +208,7 @@ namespace {
     verify_state(0, PROJECT_NAME, nullptr, nullptr, std::nullopt, false);
 
     system_tray::update_tray_playing("Moonlight");
-    verify_state(2, "Streaming started for Moonlight", "Stream Started", "Streaming started for Moonlight", 2, false);
+    verify_state(2, "Moonlight launched.", "App launched", "Moonlight launched.", 2, false);
 
     system_tray::update_tray_pausing("Moonlight");
     verify_state(3, "Streaming paused for Moonlight", "Stream Paused", "Streaming paused for Moonlight", 3, false);
@@ -304,11 +297,11 @@ TEST_F(SystemTrayTest, ResolvesDevelopmentTrayIconsFromExecutableDirectory) {
   EXPECT_EQ(system_tray::resource_path_for_testing(nullptr), nullptr);
   EXPECT_EQ(system_tray::resource_path_for_testing(""), nullptr);
 
-  const auto *sunshine_icon = system_tray::resource_path_for_testing("test_assets/web/images/logo-sunshine.svg");
+  const auto *sunshine_icon = system_tray::resource_path_for_testing("test_assets/web/images/logo-apollo.svg");
   ASSERT_NE(sunshine_icon, nullptr);
   EXPECT_TRUE(std::filesystem::path {sunshine_icon}.is_absolute());
   EXPECT_TRUE(std::filesystem::exists(sunshine_icon));
-  EXPECT_EQ(system_tray::resource_path_for_testing("test_assets/web/images/logo-sunshine.svg"), sunshine_icon);
+  EXPECT_EQ(system_tray::resource_path_for_testing("test_assets/web/images/logo-apollo.svg"), sunshine_icon);
 
   const auto *virtualhid_icon = system_tray::resource_path_for_testing("test_assets/web/images/logo-libvirtualhid.svg");
   ASSERT_NE(virtualhid_icon, nullptr);
@@ -320,9 +313,9 @@ TEST_F(SystemTrayTest, PreparesVirtualHidMenuFromCurrentLicenseStatus) {
   system_tray::prepare_tray_virtualhid_license();
 
   const auto &tray_data = system_tray::tray_data_for_testing();
-  ASSERT_NE(tray_data.menu[2].submenu, nullptr);
-  ASSERT_NE(tray_data.menu[2].submenu[0].text, nullptr);
-  EXPECT_STRNE(tray_data.menu[2].submenu[0].text, "Status: Checking");
+  ASSERT_NE(tray_data.menu[4].submenu, nullptr);
+  ASSERT_NE(tray_data.menu[4].submenu[0].text, nullptr);
+  EXPECT_STRNE(tray_data.menu[4].submenu[0].text, "Status: Checking");
 }
 
 TEST_F(SystemTrayTest, PreparesLicensedVirtualHidMenuBeforeInitialization) {
@@ -337,7 +330,7 @@ TEST_F(SystemTrayTest, PreparesLicensedVirtualHidMenuBeforeInitialization) {
   system_tray::update_tray_virtualhid_license(license, true);
 
   const auto &tray_data = system_tray::tray_data_for_testing();
-  const auto *license_menu = tray_data.menu[2].submenu;
+  const auto *license_menu = tray_data.menu[4].submenu;
   ASSERT_NE(license_menu, nullptr);
   EXPECT_STREQ(license_menu[0].text, "Status: Licensed");
   EXPECT_STREQ(license_menu[1].text, "Plan: Yearly");
@@ -380,7 +373,7 @@ TEST_P(UnlicensedVirtualHidTrayTest, PreparesMenuAndStartupNotification) {
   system_tray::update_tray_virtualhid_license(license, true);
 
   const auto &tray_data = system_tray::tray_data_for_testing();
-  const auto *license_menu = tray_data.menu[2].submenu;
+  const auto *license_menu = tray_data.menu[4].submenu;
   ASSERT_NE(license_menu, nullptr);
   EXPECT_STREQ(license_menu[0].text, std::format("Status: {}", state_label).c_str());
   EXPECT_STREQ(license_menu[1].text, state_detail);
@@ -562,7 +555,7 @@ TEST_F(SystemTrayVisualTest, CapturesIconTooltipNotificationsAndMenu) {
 
   dismissNativeNotifications();
   system_tray::update_tray_playing("Moonlight");
-  verify_state(2, "Streaming started for Moonlight", "Stream Started", "Streaming started for Moonlight", 2, false);
+  verify_state(2, "Moonlight launched.", "App launched", "Moonlight launched.", 2, false);
   capture_notification("sunshine_tray_streaming");
   system_tray::update_tray_pausing("Moonlight");
   verify_state(3, "Streaming paused for Moonlight", "Stream Paused", "Streaming paused for Moonlight", 3, false);

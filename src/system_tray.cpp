@@ -969,7 +969,7 @@ namespace system_tray {
 }  // namespace system_tray
 
   #ifdef BOOST_PROCESS_VERSION
-    #undef BOOST_PROCESS_VERSION 1
+    #undef BOOST_PROCESS_VERSION
   #endif
 
 #endif

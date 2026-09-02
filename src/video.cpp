@@ -1071,14 +1071,10 @@ namespace video {
         {"enforce_hrd"s, &config::video.amd.amd_enforce_hrd},
         {"max_au_size"s, &config::video.amd.amd_max_au_size},
       },
-      {
-        // SDR-specific options
-        {"profile"s, [](const config_t &cfg) {
-           if (cfg.profile == 66) return "baseline"s;
-           if (cfg.profile == 77) return "main"s;
-           return "high"s;
-         }},
-      },
+      // SDR-specific options: none. The H.264 profile for h264_amf is applied to
+      // ctx->profile through select_h264_profile() (honours amd_coder), so the
+      // Apollo "profile" option that read a non-existent config_t::profile is dropped.
+      {},  // SDR-specific options
       {},  // HDR-specific options
       {},  // YUV444 SDR-specific options
       {},  // YUV444 HDR-specific options

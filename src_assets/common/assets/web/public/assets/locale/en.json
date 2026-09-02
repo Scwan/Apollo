@@ -353,6 +353,7 @@
     "key_repeat_frequency_desc": "How often keys repeat every second. This configurable option supports decimals.",
     "key_rightalt_to_key_win": "Map Right Alt key to Windows key",
     "key_rightalt_to_key_win_desc": "It may be possible that you cannot send the Windows Key from Moonlight directly. In those cases it may be useful to make Apollo think the Right Alt key is the Windows key",
+    "keybindings": "Keybindings",
     "keyboard": "Enable Keyboard Input",
     "keyboard_desc": "Allows guests to control the host system with the keyboard",
     "lan_encryption_mode": "LAN Encryption Mode",

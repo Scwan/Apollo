@@ -118,8 +118,8 @@ if(SUNSHINE_ENABLE_TRAY AND (WIN32 OR APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux
     file(MAKE_DIRECTORY "${SUNSHINE_TRAY_TEST_ICON_DESTINATION_DIR}")
 
     configure_file(
-            "${CMAKE_SOURCE_DIR}/sunshine.svg"
-            "${SUNSHINE_TRAY_TEST_ICON_DESTINATION_DIR}/logo-sunshine.svg"
+            "${CMAKE_SOURCE_DIR}/apollo.svg"
+            "${SUNSHINE_TRAY_TEST_ICON_DESTINATION_DIR}/logo-apollo.svg"
             COPYONLY)
 
     if(WIN32)
@@ -130,9 +130,9 @@ if(SUNSHINE_ENABLE_TRAY AND (WIN32 OR APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux
     endif()
 
     set(SUNSHINE_TRAY_TEST_ICONS
-            sunshine-locked.svg
-            sunshine-playing.svg
-            sunshine-pausing.svg)
+            apollo-locked.svg
+            apollo-playing.svg
+            apollo-pausing.svg)
 
     foreach(icon IN LISTS SUNSHINE_TRAY_TEST_ICONS)
         configure_file(
