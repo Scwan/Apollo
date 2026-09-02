@@ -48,10 +48,22 @@ cd build && SUNSHINE_ASSETS_DIR=assets ./sunshine.exe ../test-run/sunshine.conf
 Verified: web UI at https://localhost:48990 (redirects to /welcome), serverinfo
 on 48989 reports the Apollo host, system tray created, log written.
 
-## Installing over Apollo 0.4.6
+## Installed over Apollo 0.4.6 (2026-09-02 14:23)
 
-Not done automatically. It means stopping `ApolloService`, backing up
-`C:\Program Files\Apollo`, replacing `sunshine.exe`, `tools\sunshinesvc.exe` and
-`assets\`, and starting the service again. The NSIS installer additionally
-needs `nefconc.exe` in `src_assets/windows/drivers/sudovda/`, which the repo
-does not ship.
+Done from an elevated shell: `Stop-Service ApolloService`, copy of the whole
+0.4.6 folder to `C:\Users\Epyc1\apollo-0.4.6-backup`, then the stripped
+`sunshine.exe` and `tools\sunshinesvc.exe` copied over, `assets\` mirrored with
+`robocopy /MIR /XJ` (shaders copied from `src_assets/windows/assets/shaders`
+because `build/assets/shaders` is a junction), `config\` and `drivers\` left
+alone, `Start-Service ApolloService`. Verified: service running, process in
+session 1 as SYSTEM, ports 47984/47989/47990, web UI login page (credentials
+kept), serverinfo, NVENC encoders, Qt tray, mDNS. Startup warnings are the
+same as 0.4.6 plus libvirtualhid reporting no licensed gamepad driver, which
+leaves keyboard and mouse on the Win32 path.
+
+Rollback: stop the service, copy `sunshine.exe`, `tools\sunshinesvc.exe` and
+`assets\` back from the backup folder, start the service.
+
+The NSIS installer additionally needs `nefconc.exe` in
+`src_assets/windows/drivers/sudovda/`, which the repo does not ship; the
+installed `drivers\sudovda\` folder from 0.4.6 still has it.
