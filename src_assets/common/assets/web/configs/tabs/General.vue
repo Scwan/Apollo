@@ -1,6 +1,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import Checkbox from '../../Checkbox.vue'
+import {
+  Play,
+  Plus,
+  Shield,
+  Tag,
+  Terminal,
+  Trash2,
+  Undo,
+} from '@lucide/vue'
 
 const props = defineProps({
   platform: String,
@@ -65,8 +74,8 @@ onMounted(() => {
         <option value="cs">Čeština (Czech)</option>
         <option value="de">Deutsch (German)</option>
         <option value="en">English</option>
-        <option value="en_GB">English, UK</option>
-        <option value="en_US">English, US</option>
+        <option value="en_GB">English, United Kingdom</option>
+        <option value="en_US">English, United States</option>
         <option value="es">Español (Spanish)</option>
         <option value="fr">Français (French)</option>
         <option value="hu">Magyar (Hungarian)</option>
@@ -117,10 +126,10 @@ onMounted(() => {
       <table class="table" v-if="cmds[type].length > 0">
         <thead>
         <tr>
-          <th scope="col"><i class="fas fa-play"></i> {{ $t('_common.do_cmd') }}</th>
-          <th scope="col"><i class="fas fa-undo"></i> {{ $t('_common.undo_cmd') }}</th>
+          <th scope="col"><Play :size="16" /> {{ $t('_common.do_cmd') }}</th>
+          <th scope="col"><Undo :size="16" /> {{ $t('_common.undo_cmd') }}</th>
           <th scope="col" v-if="platform === 'windows'">
-            <i class="fas fa-shield-alt"></i> {{ $t('_common.run_as') }}
+            <Shield :size="16" /> {{ $t('_common.run_as') }}
           </th>
           <th scope="col"></th>
         </tr>
@@ -143,10 +152,10 @@ onMounted(() => {
           </td>
           <td class="text-end">
             <button class="btn btn-danger me-2" @click="removeCmd(cmds[type], i)">
-              <i class="fas fa-trash"></i>
+              <Trash2 :size="16" />
             </button>
             <button class="btn btn-success" @click="addCmd(cmds[type], prepCmdTemplate, i)">
-              <i class="fas fa-plus"></i>
+              <Plus :size="16" />
             </button>
           </td>
         </tr>
@@ -167,10 +176,10 @@ onMounted(() => {
       <table class="table" v-if="serverCmd.length > 0">
         <thead>
         <tr>
-          <th scope="col"><i class="fas fa-tag"></i> {{ $t('_common.cmd_name') }}</th>
-          <th scope="col"><i class="fas fa-terminal"></i> {{ $t('_common.cmd_val') }}</th>
+          <th scope="col"><Tag :size="16" /> {{ $t('_common.cmd_name') }}</th>
+          <th scope="col"><Terminal :size="16" /> {{ $t('_common.cmd_val') }}</th>
           <th scope="col" v-if="platform === 'windows'">
-            <i class="fas fa-shield-alt"></i> {{ $t('_common.run_as') }}
+            <Shield :size="16" /> {{ $t('_common.run_as') }}
           </th>
           <th scope="col"></th>
         </tr>
@@ -191,10 +200,10 @@ onMounted(() => {
           </td>
           <td class="text-end">
             <button class="btn btn-danger me-2" @click="removeCmd(serverCmd, i)">
-              <i class="fas fa-trash"></i>
+              <Trash2 :size="16" />
             </button>
             <button class="btn btn-success" @click="addCmd(serverCmd, serverCmdTemplate, i)">
-              <i class="fas fa-plus"></i>
+              <Plus :size="16" />
             </button>
           </td>
         </tr>
@@ -248,5 +257,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-
+.pre-wrap {
+  white-space: pre-wrap;
+}
 </style>

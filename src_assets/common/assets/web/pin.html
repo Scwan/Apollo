@@ -13,6 +13,10 @@
     .pin-tab-bar {
       margin-bottom: 2em !important;
     }
+
+    .edit-host-icon {
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -29,16 +33,32 @@
     </ul>
     <form v-if="currentTab === '#PIN'" class="form d-flex flex-column align-items-center" id="form" @submit.prevent="registerDevice">
       <div class="card flex-column d-flex p-4 mb-4">
-        <input type="text" pattern="\d*" :placeholder="`${$t('navbar.pin')}`" autofocus id="pin-input" class="form-control mt-2" required />
-        <input type="text" :placeholder="`${$t('pin.device_name')}`" id="name-input" class="form-control my-4" />
-        <button class="btn btn-primary">{{ $t('pin.send') }}</button>
+        <div class="input-group mt-2">
+          <span class="input-group-text">
+            <hash :size="18" class="icon"></hash>
+          </span>
+          <input type="text" pattern="\d*" :placeholder="`${$t('navbar.pin')}`" autofocus id="pin-input" class="form-control" required />
+        </div>
+        <div class="input-group my-4">
+          <span class="input-group-text">
+            <monitor :size="18" class="icon"></monitor>
+          </span>
+          <input type="text" :placeholder="`${$t('pin.device_name')}`" id="name-input" class="form-control" />
+        </div>
+        <button class="btn btn-primary">
+          <forward :size="18" class="icon"></forward>
+          {{ $t('pin.send') }}
+        </button>
       </div>
       <div id="status"></div>
     </form>
     <form v-else class="form d-flex flex-column align-items-center" @submit.prevent="requestOTP">
       <div class="card flex-column d-flex p-4 mb-4">
         <div v-show="editingHost || (otp && hostAddr)" id="qrRef"></div>
-        <p v-if="editingHost || (otp && hostAddr)" class="text-center text-secondary"><a class="text-secondary" :href="deepLink">art://{{ hostAddr }}:{{ hostPort }}</a> <i class="fas fa-fw fa-pen-to-square" @click="editHost"></i></p>
+        <p v-if="editingHost || (otp && hostAddr)" class="text-center text-secondary">
+          <a class="text-secondary" :href="deepLink">art://{{ hostAddr }}:{{ hostPort }}</a>
+          <square-pen :size="16" class="icon edit-host-icon" @click="editHost"></square-pen>
+        </p>
         <h1 class="mb-4 text-center">{{ otp && otp || '????' }}</h1>
         <div v-if="editingHost" class="d-flex flex-column align-items-stretch">
           <input type="text" placeholder="HOST" v-model="hostAddr" autofocus class="form-control mt-2" />
@@ -48,7 +68,10 @@
         <div v-else class="d-flex flex-column align-items-stretch">
           <input type="text" pattern="[0-9a-zA-Z]{4,}" :placeholder="`${$t('pin.otp_passphrase')}`" v-model="passphrase" required autofocus class="form-control mt-2" />
           <input type="text" :placeholder="`${$t('pin.device_name')}`" v-model="deviceName" class="form-control my-4" />
-          <button class="btn btn-primary">{{ $t('pin.generate_pin') }}</button>
+          <button class="btn btn-primary">
+            <forward :size="18" class="icon"></forward>
+            {{ $t('pin.generate_pin') }}
+          </button>
         </div>
       </div>
       <div v-if="otpMessage" class="alert" :class="['alert-' + otpStatus]">{{ otpMessage }}</div>
@@ -64,6 +87,7 @@
           <div class="d-flex justify-content-end align-items-center">
             <h2 id="unpair" class="me-auto">{{ $t('pin.device_management') }}</h2>
             <button class="btn btn-danger" :disabled="unpairAllPressed" @click="unpairAll">
+              <trash-2 :size="18" class="icon"></trash-2>
               {{ $t('pin.unpair_all') }}
             </button>
           </div>
@@ -83,7 +107,7 @@
         </div>
       </div>
       <ul id="client-list" class="list-group list-group-flush list-group-item-light" v-if="clients && clients.length > 0">
-        <template v-for="client in clients" class="list-group-item d-flex align-items-center">
+        <template v-for="client in clients" :key="client.uuid">
           <div v-if="client.editing" class="list-group-item d-flex align-items-stretch flex-column">
             <div class="d-flex align-items-center">
               <div class="p-2 flex-grow-1 d-flex align-items-center">
@@ -93,8 +117,12 @@
                 &nbsp;
                 <input v-model="client.editName" @keyup.enter="saveClient(client)" class="form-control flex-grow-1" type="text" :placeholder="$t('pin.device_name')">
               </div>
-              <div class="me-2 btn btn-success" @click="saveClient(client)"><i class="fas fa-check"></i></div>
-              <div class="me-2 btn btn-secondary" @click="cancelEdit(client)"><i class="fas fa-times"></i></div>
+              <button type="button" class="me-2 btn btn-success" @click="saveClient(client)">
+                <check :size="18" class="icon"></check>
+              </button>
+              <button type="button" class="me-2 btn btn-secondary" @click="cancelEdit(client)">
+                <x :size="18" class="icon"></x>
+              </button>
             </div>
             <div class="align-items-top d-flex flex-row justify-content-center">
               <div v-for="group in permissionGroups" class="d-flex flex-column mx-2">
@@ -153,9 +181,9 @@
               <table class="mt-2 table" v-if="client[`edit_${cmdType}`].length > 0">
                 <thead>
                   <tr>
-                    <th style="width: 80%"><i class="fas fa-terminal"></i> {{ $t('_common.cmd_val') }}</th>
+                    <th style="width: 80%"><terminal :size="16" class="icon"></terminal> {{ $t('_common.cmd_val') }}</th>
                     <th style="min-width: 10em; max-width: 12em;" v-if="platform === 'windows'">
-                      <i class="fas fa-shield-alt"></i> {{ $t('_common.run_as') }}
+                      <shield :size="16" class="icon"></shield> {{ $t('_common.run_as') }}
                     </th>
                     <th style="min-width: 110px;"></th>
                   </tr>
@@ -173,10 +201,10 @@
                   </td>
                   <td>
                     <button class="btn btn-danger me-2" @click="removeCmd(client[`edit_${cmdType}`], i)">
-                      <i class="fas fa-trash"></i>
+                      <trash-2 :size="16" class="icon"></trash-2>
                     </button>
                     <button class="btn btn-success" @click="addCmd(client[`edit_${cmdType}`], i)">
-                      <i class="fas fa-plus"></i>
+                      <plus :size="16" class="icon"></plus>
                     </button>
                   </td>
                 </tr>
@@ -195,9 +223,23 @@
               &nbsp;
               <span class="me-2">{{client.name != "" ? client.name : $t('pin.unpair_single_unknown')}}</span>
             </div>
-            <div v-if="client.connected" class="me-2 btn btn-warning" @click="disconnectClient(client.uuid)"><i class="fas fa-link-slash"></i></div>
-            <div class="me-2 btn btn-primary" @click="editClient(client)"><i class="fas fa-edit"></i></div>
-            <div class="me-2 btn btn-danger" @click="unpairSingle(client.uuid)"><i class="fas fa-trash"></i></div>
+            <!-- Enable / disable the client without unpairing it (only shown when the server reports the flag) -->
+            <div v-if="client.enabled !== undefined" class="form-check form-switch me-3 mb-0">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     :id="'toggle-' + client.uuid"
+                     :checked="client.enabled"
+                     :aria-checked="client.enabled.toString()"
+                     @change="toggleClient(client)">
+            </div>
+            <button v-if="client.connected" type="button" class="me-2 btn btn-warning" @click="disconnectClient(client.uuid)">
+              <unlink :size="18" class="icon"></unlink>
+            </button>
+            <button type="button" class="me-2 btn btn-primary" @click="editClient(client)">
+              <edit :size="18" class="icon"></edit>
+            </button>
+            <button type="button" class="me-2 btn btn-danger" @click="unpairSingle(client.uuid)">
+              <trash-2 :size="18" class="icon"></trash-2>
+            </button>
           </div>
         </template>
       </ul>
@@ -213,6 +255,21 @@
   import { initApp } from './init'
   import Navbar from './Navbar.vue'
   import Checkbox from './Checkbox.vue'
+  import { apiFetch } from './fetch_utils'
+  import {
+    Check,
+    Edit,
+    Forward,
+    Hash,
+    Monitor,
+    Plus,
+    Shield,
+    SquarePen,
+    Terminal,
+    Trash2,
+    Unlink,
+    X,
+  } from '@lucide/vue'
 
   let resetOTPTimeout = null;
   const qrContainer = document.createElement('div');
@@ -379,10 +436,34 @@
     elevated: 'false'
   }
 
+  // Drop empty command entries before sending a client's connect/disconnect commands.
+  const filterCmds = (cmds) => (cmds || []).reduce((filtered, {cmd: _cmd, elevated}) => {
+    const cmd = (_cmd || '').trim()
+    if (cmd) {
+      filtered.push({
+        cmd,
+        elevated
+      })
+    }
+    return filtered
+  }, [])
+
   let app = createApp({
     components: {
       Navbar,
-      Checkbox
+      Checkbox,
+      Check,
+      Edit,
+      Forward,
+      Hash,
+      Monitor,
+      Plus,
+      Shield,
+      SquarePen,
+      Terminal,
+      Trash2,
+      Unlink,
+      X,
     },
     inject: ['i18n'],
     data,
@@ -420,12 +501,12 @@
         let name = document.querySelector("#name-input").value;
         document.querySelector("#status").innerHTML = "";
         let b = JSON.stringify({pin: pin, name: name});
-        fetch("./api/pin", {
+        apiFetch("./api/pin", {
           credentials: 'include',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
-          method: 'POST',
           body: b
         })
           .then((response) => response.json())
@@ -450,12 +531,12 @@
       requestOTP() {
         if (this.editingHost) return;
 
-        fetch("./api/otp", {
+        apiFetch("./api/otp", {
           credentials: 'include',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
-          method: 'POST',
           body: JSON.stringify({ passphrase: this.passphrase, deviceName: this.deviceName })
         })
         .then(resp => resp.json())
@@ -549,45 +630,35 @@
         client.editEnableLegacyOrdering = client.enable_legacy_ordering;
         client.editAlwaysUseVirtualDisplay = client.always_use_virtual_display;
       },
-      saveClient(client) {
-        client.editing = false;
-        currentEditingClient = null;
-        const editedClient = {
+      /**
+       * Build the full record expected by /api/clients/update. Every field is sent, because the
+       * server replaces the stored entry rather than merging into it.
+       */
+      buildClientPayload(client, values) {
+        const payload = {
           uuid: client.uuid,
-          name: client.editName,
-          display_mode: client.editDisplayMode.trim(),
-          allow_client_commands: client.editAllowClientCommands,
-          enable_legacy_ordering: client.editEnableLegacyOrdering,
-          always_use_virtual_display: client.editAlwaysUseVirtualDisplay,
-          perm: client.editPerm & permissionMapping._all,
-          do: client.edit_do.reduce((filtered, {cmd: _cmd, elevated}) => {
-            const cmd = _cmd.trim()
-            if (cmd) {
-              filtered.push({
-                cmd,
-                elevated
-              })
-            }
-            return filtered
-          }, []),
-          undo: client.edit_undo.reduce((filtered, {cmd: _cmd, elevated}) => {
-            const cmd = _cmd.trim()
-            if (cmd) {
-              filtered.push({
-                cmd,
-                elevated
-              })
-            }
-            return filtered
-          }, [])
+          name: values.name,
+          display_mode: (values.display_mode || '').trim(),
+          allow_client_commands: values.allow_client_commands,
+          enable_legacy_ordering: values.enable_legacy_ordering,
+          always_use_virtual_display: values.always_use_virtual_display,
+          perm: values.perm & permissionMapping._all,
+          do: filterCmds(values.do),
+          undo: filterCmds(values.undo)
         }
-        fetch("./api/clients/update", {
+        if (values.enabled !== undefined) {
+          payload.enabled = values.enabled;
+        }
+        return payload;
+      },
+      updateClient(payload) {
+        return apiFetch("./api/clients/update", {
           credentials: 'include',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
-          method: 'POST',
-          body: JSON.stringify(editedClient)
+          body: JSON.stringify(payload)
         })
         .then(resp => resp.json())
         .then(resp => {
@@ -605,6 +676,39 @@
             this.refreshClients();
           }, 1000);
         });
+      },
+      saveClient(client) {
+        client.editing = false;
+        currentEditingClient = null;
+        const editedClient = this.buildClientPayload(client, {
+          name: client.editName,
+          display_mode: client.editDisplayMode,
+          allow_client_commands: client.editAllowClientCommands,
+          enable_legacy_ordering: client.editEnableLegacyOrdering,
+          always_use_virtual_display: client.editAlwaysUseVirtualDisplay,
+          perm: client.editPerm,
+          do: client.edit_do,
+          undo: client.edit_undo,
+          enabled: client.enabled
+        });
+        this.updateClient(editedClient);
+      },
+      toggleClient(client) {
+        if (currentEditingClient) {
+          this.cancelEdit(currentEditingClient);
+        }
+        const toggledClient = this.buildClientPayload(client, {
+          name: client.name,
+          display_mode: client.display_mode,
+          allow_client_commands: client.allow_client_commands,
+          enable_legacy_ordering: client.enable_legacy_ordering,
+          always_use_virtual_display: client.always_use_virtual_display,
+          perm: client.perm,
+          do: client.do,
+          undo: client.undo,
+          enabled: !client.enabled
+        });
+        this.updateClient(toggledClient);
       },
       permToStr(perm) {
         const permSegments = [];
@@ -638,12 +742,12 @@
         event.target.reportValidity();
       },
       disconnectClient(uuid) {
-        fetch("./api/clients/disconnect", {
+        apiFetch("./api/clients/disconnect", {
           credentials: 'include',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
-          method: 'POST',
           body: JSON.stringify({ uuid })
         }).finally(() => {
           setTimeout(() => {
@@ -653,9 +757,9 @@
       },
       unpairAll() {
         this.unpairAllPressed = true;
-        fetch("./api/clients/unpair-all", {
+        apiFetch("./api/clients/unpair-all", {
           credentials: 'include',
-          method: 'POST',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
@@ -671,12 +775,12 @@
           });
       },
       unpairSingle(uuid) {
-        fetch("./api/clients/unpair", {
+        apiFetch("./api/clients/unpair", {
           credentials: 'include',
+          method: "POST",
           headers: {
             'Content-Type': 'application/json'
           },
-          method: 'POST',
           body: JSON.stringify({ uuid })
         }).then(() => {
           this.showApplyMessage = true;
@@ -698,6 +802,7 @@
                 display_mode,
                 perm,
                 connected,
+                enabled,
                 do: _do,
                 undo,
                 allow_client_commands,
@@ -711,6 +816,7 @@
                   display_mode,
                   perm: permInt,
                   connected,
+                  enabled,
                   editing: false,
                   do: _do,
                   undo,

@@ -128,6 +128,27 @@ resort suggestion.
 
 ## Linux
 
+### Hardware Encoders throttle/drop FPS during high GPU load
+Capture methods (`wlgrab`) or encoders (`nvenc`, `vaapi`) that utilize EGL contexts may exhibit FPS drops
+in conjunction with a Sunshine installation that runs in a sandboxed or reduced permissions state
+(Flatpak, AppImage, or when using Portal capture) due to the lack of active CAP_SYS_NICE process permissions
+needed to set up high priority EGL contexts.
+
+To check if you are affected by this issue, look out for this message in your Sunshine log:
+```
+Warning: EGL: context priority set to HIGH but CAP_SYS_NICE capability is missing
+```
+
+> [!IMPORTANT]
+> Switching to Vulkan encoding should resolve the issue for the majority of configurations, but refer to this
+> table for recommended configurations (especially if Vulkan encoding is not supported on your system):
+> | Desktop Environment | Vulkan Supported? | Recommended Sunshine Install Type | Recommended Capture & Encoder Configuration       |
+> |:--------------------|-------------------|-----------------------------------|--------------------------------------------------:|
+> | KDE Plasma          | Yes               | Any                               | `portal` or `kwin` capture with `vulkan` encoding |
+> | KDE Plasma          | No                | Non-Sandboxed                     | `kwin` capture with `vaapi`/`nvenc` encoding      |
+> | GNOME / other       | Yes               | Any                               | `portal` capture with `vulkan` encoding           |
+> | GNOME / other       | No                | Non-Sandboxed                     | `kms` capture with `vaapi`/`nvenc` encoding       |
+
 ### Hardware Encoding fails
 Due to legal concerns, Mesa has disabled hardware decoding and encoding by default.
 
@@ -149,9 +170,35 @@ If you see the above error in the Sunshine logs, compiling *Mesa* manually may b
 > Other build options are listed in the
 > [meson options](https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/meson_options.txt) file.
 
+### Portal token issues
+Portal capture requires you to manually approve Remote Desktop permissions via an on-screen prompt on the host.
+This creates a portal token which is used to automatically reauthorize on subsequent reconnects, but under certain
+circumstances (a Sunshine crash, switching to another desktop environment, or if a monitor hotplug event occurs)
+the portal token may become lost or invalid, necessitating manual re-approval of capture permissions.
+
+Users of the KDE Plasma desktop can bypass this issue either by switching to `kwin` capture or setting the following
+configuration to enable permanent capture autorization for Sunshine via Portal capture:
+```
+flatpak permission-set kde-authorized remote-desktop dev.lizardbyte.app.Sunshine yes
+```
+> [!NOTE]
+> Although this configuration is plumbed through Flatpak, it will work with any supported Sunshine installation type.
+
 ### Input not working
 After installation, the `udev` rules need to be reloaded. Our post-install script tries to do this for you
 automatically, but if it fails, you may need to restart your system.
+
+Sunshine recreates virtual gamepad device nodes for each streaming session. Manual `chmod` or `setfacl`
+changes therefore disappear when the client reconnects. Confirm that the installed Sunshine rule contains the
+parent-property import and `libvirtualhid/uhid/*` match, then reload it and reapply it to existing gamepad nodes:
+
+```bash
+grep -R -E 'IMPORT\{parent\}="HID_\*"|ENV\{HID_PHYS\}=="libvirtualhid/uhid/\*"' \
+  /etc/udev/rules.d /usr/lib/udev/rules.d /lib/udev/rules.d 2>/dev/null
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=hidraw
+sudo udevadm trigger --subsystem-match=input
+```
 
 If the input is still not working, you may need to add your user to the `input` group.
 
@@ -159,17 +206,49 @@ If the input is still not working, you may need to add your user to the `input` 
 sudo usermod -aG input $USER
 ```
 
-### KMS Streaming fails
-If screencasting fails with KMS, you may need to run the following to force unprivileged screencasting.
+#### Multiseat
+
+If you run multiple concurrent Wayland sessions on separate logind seats (e.g. `seat0`, `seat1`),
+your compositor may ignore injected input unless Sunshine's virtual devices are assigned to the correct seat.
+
+Sunshine determines its target seat from `XDG_SEAT`, which is typically set automatically by your display manager.
+If needed, you can override it manually in your systemd service file or shell environment before starting Sunshine.
+
+When the seat is not `seat0`, Sunshine appends the seat name to its virtual device names, for example:
+
+- Keyboard passthrough (seat1)
+- Sunshine (libvirtualhid) PS5 Controller (seat1)
+
+Sunshine creates two mouse devices: a relative one and an absolute one.
+
+To assign Sunshine's virtual devices to the correct seat, create this udev rules file
+(/etc/udev/rules.d/72-sunshine-virtual-seat.rules):
+```udev
+SUBSYSTEM=="input", KERNEL=="input*", ATTR{name}=="*(seat1)*", TAG+="seat", ENV{ID_SEAT}="seat1"
+```
+
+Then reload udev:
 
 ```bash
-sudo setcap -r $(readlink -f $(which sunshine))
+sudo udevadm control --reload-rules && sudo udevadm trigger -s input
+```
+
+### KMS Streaming fails
+KMS screencasting requires elevated privileges which are not allowed for Flatpak or AppImage packages.
+This means that you must install Sunshine using the native package format of your distribution, if available.
+KMS capture will soon be phased out in favour of XDG Portal Capture (which works with all package types).
+
+### KMS Streaming; some windows flicker/disappear on KDE Plasma 6.5+
+KWin's overlay support interferes with KMS capture. As of KWin 6.5 this is not yet set by default, but
+for future versions that enables this by default, you may be able to disable again via a special
+[environment variable](https://invent.kde.org/plasma/kwin/-/wikis/Environment-Variables#kwin_use_overlays):
+
+```bash
+export KWIN_USE_OVERLAYS=0
 ```
 
 > [!NOTE]
-> The above command will not work with the AppImage or Flatpak packages. Please refer to the
-> [AppImage setup](md_docs_2getting__started.html#appimage) or
-> [Flatpak setup](md_docs_2getting__started.html#flatpak) for more specific instructions.
+> Disabling overlays will reduce KWin's rendering efficiency. Consider using XDG Portal Capture instead.
 
 ### KMS streaming fails on Nvidia GPUs
 If KMS screen capture results in a black screen being streamed, you may need to
@@ -223,7 +302,46 @@ launchctl load -w /Library/LaunchAgents/org.freedesktop.dbus-session.plist
 ## Windows
 
 ### No gamepad detected
-Verify that you've installed [Nefarius Virtual Gamepad](https://github.com/nefarius/ViGEmBus/releases/latest).
+Sunshine uses libvirtualhid for virtual input on Windows. Install the
+[Virtual HID Driver](https://github.com/LizardByte/libvirtualhid/releases/latest) separately for a driver-backed Raw
+Input keyboard and mouse plus full virtual gamepad support. ViGEmBus is detected only as a limited fallback for Xbox
+360 and DualShock 4 gamepads when libvirtualhid is unavailable. If you use the
+[ViGEmBus fallback](https://github.com/nefarius/ViGEmBus/releases/latest), you must use version 1.17 or newer.
+
+Sunshine requires Virtual HID Driver version `2026.829.2338.54` or newer. Earlier releases use incompatible Windows
+control and broker protocols. The Troubleshooting page reports an older installed package as unsupported and links
+to the current driver release. Local development driver builds using a `0.0.0.*` version remain supported.
+
+Virtual HID Driver adds Xbox One, Xbox Series, DualSense, Nintendo Switch Pro, and Generic gamepads, plus advanced
+controller features such as motion, touchpads, LEDs, and adaptive triggers when supported. Unlike the discontinued
+ViGEmBus project, Virtual HID Driver is actively developed and supported by the LizardByte team.
+
+An active Virtual HID Driver machine license is required before Sunshine can create driver-backed libvirtualhid
+devices, including gamepads and the Raw Input keyboard and mouse. Follow the warning on the Web UI home page, the
+startup tray notification, or the **Virtual HID Driver** tray submenu to open the license section on the
+Troubleshooting page, where you can activate a key or follow the purchase link.
+
+After installation, it is recommended to restart your computer.
+
+### Games do not detect keyboard input
+With a compatible Virtual HID Driver and active license, Sunshine sends normal key transitions through a real HID
+keyboard so games using Raw Input can receive them. Unicode text input and keys outside the supported HID keyboard
+page continue to use Windows input injection. When the driver-backed keyboard cannot be created because the driver,
+broker, or license is unavailable, libvirtualhid falls back to SendInput.
+
+Check the Virtual HID Driver version and license sections on the Web UI Troubleshooting page. Sunshine recreates the
+shared keyboard and mouse after a successful license activation, validation, or deactivation, so you do not need to
+restart Sunshine merely to switch between the HID and SendInput paths.
+
+### Games do not detect mouse input
+With a compatible Virtual HID Driver and active license, Sunshine sends relative mouse movement, buttons, and scrolling
+through a real HID device so games using Raw Input can receive them. Absolute positioning still uses Windows input
+injection. When the driver-backed mouse cannot be created, libvirtualhid falls back to SendInput; the Windows cursor may
+still move even though a game that listens only for Raw Input receives nothing.
+
+Check the Virtual HID Driver version and license sections on the Web UI Troubleshooting page even when controller input
+is disabled. The same live refresh used by the keyboard path also switches the mouse between HID and SendInput without
+requiring a Sunshine restart.
 
 ### Permission denied
 Since Sunshine runs as a service on Windows, it may not have the same level of access that your regular user account

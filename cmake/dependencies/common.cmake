@@ -1,6 +1,10 @@
 # load common dependencies
 # this file will also load platform specific dependencies
 
+# Resolve OpenSSL before subprojects run their own find_package(OpenSSL) calls.
+# This ensures a user-provided OPENSSL_ROOT_DIR is honored consistently.
+find_package(OpenSSL REQUIRED)
+
 # boost, this should be before Simple-Web-Server as it also depends on boost
 include(dependencies/Boost_Sunshine)
 
@@ -12,12 +16,63 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/third-party/moonlight-common-c/enet")
 # web server
 add_subdirectory("${CMAKE_SOURCE_DIR}/third-party/Simple-Web-Server")
 
+# lizardbyte common helpers
+set(LIZARDBYTE_COMMON_BUILD_TEST_SUPPORT ${BUILD_TESTS}
+        CACHE BOOL "Build lizardbyte-common GoogleTest support helpers" FORCE)
+add_subdirectory("${CMAKE_SOURCE_DIR}/third-party/lizardbyte-common")
+
 # libdisplaydevice
 add_subdirectory("${CMAKE_SOURCE_DIR}/third-party/libdisplaydevice")
 
+if(SUNSHINE_ENABLE_TRAY)
+    if(SUNSHINE_USE_STATIC_QT)
+        set(_sunshine_find_library_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+        set(_sunshine_import_library_suffix "${CMAKE_IMPORT_LIBRARY_SUFFIX}")
+        set(_sunshine_pkg_config_argn "${PKG_CONFIG_ARGN}")
+        set(_sunshine_disable_find_package_harfbuzz "${CMAKE_DISABLE_FIND_PACKAGE_harfbuzz}")
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+        set(CMAKE_IMPORT_LIBRARY_SUFFIX ".a")
+        set(PKG_CONFIG_ARGN --static)
+
+        # HarfBuzz's config-file target omits dependencies needed by its static archive.
+        # Use Qt's pkg-config fallback so --static supplies the complete link interface.
+        set(CMAKE_DISABLE_FIND_PACKAGE_harfbuzz TRUE)
+
+        # CMake's FindTIFF module does not propagate dependencies of the static archive.
+        # Provide its standard target from pkg-config before Qt imports the TIFF plugin.
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(SUNSHINE_STATIC_TIFF REQUIRED IMPORTED_TARGET libtiff-4)
+        add_library(TIFF::TIFF INTERFACE IMPORTED)
+        target_link_libraries(TIFF::TIFF INTERFACE PkgConfig::SUNSHINE_STATIC_TIFF)
+
+        set(_sunshine_module_path "${CMAKE_MODULE_PATH}")
+        find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
+        get_target_property(_sunshine_qt_core_type Qt6::Core TYPE)
+        if(NOT _sunshine_qt_core_type STREQUAL "STATIC_LIBRARY")
+            message(FATAL_ERROR "SUNSHINE_USE_STATIC_QT requires a static Qt 6 installation.")
+        endif()
+        set(CMAKE_MODULE_PATH "${_sunshine_module_path}")
+    endif()
+
+    add_subdirectory("${CMAKE_SOURCE_DIR}/third-party/tray")
+
+    if(SUNSHINE_USE_STATIC_QT)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES "${_sunshine_find_library_suffixes}")
+        set(CMAKE_IMPORT_LIBRARY_SUFFIX "${_sunshine_import_library_suffix}")
+        set(PKG_CONFIG_ARGN "${_sunshine_pkg_config_argn}")
+        set(CMAKE_DISABLE_FIND_PACKAGE_harfbuzz "${_sunshine_disable_find_package_harfbuzz}")
+        unset(_sunshine_disable_find_package_harfbuzz)
+        unset(_sunshine_find_library_suffixes)
+        unset(_sunshine_import_library_suffix)
+        unset(_sunshine_module_path)
+        unset(_sunshine_pkg_config_argn)
+        unset(_sunshine_qt_core_type)
+    endif()
+endif()
+
 # common dependencies
+include("${CMAKE_MODULE_PATH}/dependencies/nv_codec_headers.cmake")
 include("${CMAKE_MODULE_PATH}/dependencies/nlohmann_json.cmake")
-find_package(OpenSSL REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 pkg_check_modules(CURL REQUIRED libcurl)
@@ -27,49 +82,16 @@ pkg_check_modules(MINIUPNP miniupnpc REQUIRED)
 include_directories(SYSTEM ${MINIUPNP_INCLUDE_DIRS})
 
 # ffmpeg pre-compiled binaries
-if(NOT DEFINED FFMPEG_PREPARED_BINARIES)
-    if(WIN32)
-        set(FFMPEG_PLATFORM_LIBRARIES mfplat ole32 strmiids mfuuid vpl)
-    elseif(UNIX AND NOT APPLE)
-        set(FFMPEG_PLATFORM_LIBRARIES numa va va-drm va-x11 X11)
-    endif()
-    set(FFMPEG_PREPARED_BINARIES
-            "${CMAKE_SOURCE_DIR}/third-party/build-deps/dist/${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+include("${CMAKE_MODULE_PATH}/dependencies/ffmpeg.cmake")
 
-    # check if the directory exists
-    if(NOT EXISTS "${FFMPEG_PREPARED_BINARIES}")
-        message(FATAL_ERROR
-                "FFmpeg pre-compiled binaries not found at ${FFMPEG_PREPARED_BINARIES}. \
-                Please consider contributing to the LizardByte/build-deps repository. \
-                Optionally, you can use the FFMPEG_PREPARED_BINARIES option to specify the path to the \
-                system-installed FFmpeg libraries")
-    endif()
-
-    if(EXISTS "${FFMPEG_PREPARED_BINARIES}/lib/libhdr10plus.a")
-        set(HDR10_PLUS_LIBRARY
-                "${FFMPEG_PREPARED_BINARIES}/lib/libhdr10plus.a")
-    endif()
-    set(FFMPEG_LIBRARIES
-            "${FFMPEG_PREPARED_BINARIES}/lib/libavcodec.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libswscale.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libavutil.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libcbs.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libSvtAv1Enc.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libx264.a"
-            "${FFMPEG_PREPARED_BINARIES}/lib/libx265.a"
-            ${HDR10_PLUS_LIBRARY}
-            ${FFMPEG_PLATFORM_LIBRARIES})
+# Opus
+# Homebrew provides opus as a dynamic library only, so disable static linking for Homebrew builds
+if(SUNSHINE_BUILD_HOMEBREW)
+    set(OPUS_USE_STATIC OFF CACHE BOOL "Static linking for libopus")
 else()
-    set(FFMPEG_LIBRARIES
-        "${FFMPEG_PREPARED_BINARIES}/lib/libavcodec.a"
-        "${FFMPEG_PREPARED_BINARIES}/lib/libswscale.a"
-        "${FFMPEG_PREPARED_BINARIES}/lib/libavutil.a"
-        "${FFMPEG_PREPARED_BINARIES}/lib/libcbs.a"
-        ${FFMPEG_PLATFORM_LIBRARIES})
+    set(OPUS_USE_STATIC ON CACHE BOOL "Static linking for libopus")
 endif()
-
-set(FFMPEG_INCLUDE_DIRS
-        "${FFMPEG_PREPARED_BINARIES}/include")
+include("${CMAKE_MODULE_PATH}/dependencies/FindOpus.cmake")
 
 # platform specific dependencies
 if(WIN32)
