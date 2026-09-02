@@ -53,7 +53,7 @@ namespace boost {
     class path;
   }
 
-  namespace process::v1 {
+  namespace process::inline v1 {
     class child;
     class group;
     template<typename Char>
@@ -62,7 +62,7 @@ namespace boost {
      * @brief Map of environment variable names to values.
      */
     typedef basic_environment<char> environment;
-  }  // namespace process::v1
+  }  // namespace process::inline v1
 }  // namespace boost
 #endif
 namespace video {
