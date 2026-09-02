@@ -67,3 +67,16 @@ Rollback: stop the service, copy `sunshine.exe`, `tools\sunshinesvc.exe` and
 The NSIS installer additionally needs `nefconc.exe` in
 `src_assets/windows/drivers/sudovda/`, which the repo does not ship; the
 installed `drivers\sudovda\` folder from 0.4.6 still has it.
+
+## Pairing the installed service without the web UI (2026-09-02)
+
+`sunshine.exe <config> -0` reads the pairing PIN from stdin. A second instance
+from `build\` with `test-run\sunshine.conf` (port 48989, absolute state paths,
+`cert`/`pkey` = the installed `config\credentials\`) was started with the PIN
+piped in, `guictl apollo://localhost:48989 --pair 1234` paired against it, and
+the resulting `named_devices` array was moved into the installed
+`config\sunshine_state.json` under `root` (credentials stay flat at the top
+level, `root.uniqueid` must exist). After a service restart the installed
+Apollo streamed to guictl, moved the pointer to the exact desktop pixel,
+clicked and typed. Relative `file_state`/`log_path` values resolve against the
+config directory, not the working directory.
