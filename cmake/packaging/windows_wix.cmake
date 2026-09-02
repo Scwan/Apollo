@@ -27,8 +27,10 @@ execute_process(
 )
 
 if(NOT WIX_INSTALL_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to install WiX tools locally.
-     WiX packaging may not work correctly, error: ${WIX_INSTALL_OUTPUT}")
+    # A dotnet runtime without the SDK (common on developer machines) cannot
+    # install tools; the NSIS installer does not need WiX, so keep configuring.
+    message(WARNING "Failed to install WiX tools locally, skipping WiX packaging: ${WIX_INSTALL_OUTPUT}")
+    return()
 endif()
 
 # Install WiX UI Extension
@@ -40,7 +42,8 @@ execute_process(
 )
 
 if(NOT WIX_UI_INSTALL_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to install WiX UI extension, error: ${WIX_UI_INSTALL_OUTPUT}")
+    message(WARNING "Failed to install WiX UI extension, skipping WiX packaging: ${WIX_UI_INSTALL_OUTPUT}")
+    return()
 endif()
 
 # Install WiX Util Extension
